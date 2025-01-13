@@ -7,9 +7,11 @@ MSOSM_GPU_DM_BATCH_stream::MSOSM_GPU_DM_BATCH_stream(float *bw, float *dm, float
     stream_event = new cudaEvent_t[numStreams];
     for (int i = 0; i < numStreams; i++)
     {
-        CUDA_CHECK(cudaEventCreate(&(stream_event[i])));
+        // CUDA_CHECK(cudaEventCreate(&(stream_event[i])));
+        CUDA_CHECK(cudaEventCreateWithFlags(&(stream_event[i]), cudaEventDisableTiming));
     }
-    CUDA_CHECK(cudaEventCreate(&fft_event));
+    // CUDA_CHECK(cudaEventCreate(&fft_event));
+    CUDA_CHECK(cudaEventCreateWithFlags(&fft_event, cudaEventDisableTiming));
     stream = new cudaStream_t[numStreams];
     for (int i = 0; i < numStreams; i++)
     {

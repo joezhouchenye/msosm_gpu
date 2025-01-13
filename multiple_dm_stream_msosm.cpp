@@ -9,7 +9,7 @@ void output_thread(Complex *dst, Complex *src, unsigned long process_len, int nu
     src[process_len].x = 1;
     while (count < num_process)
     {
-        while(src[process_len].x == 1)
+        while (src[process_len].x == 1)
             ;
         nvtxRangePush("Output Copy");
         src[process_len].x = 1;
@@ -54,10 +54,11 @@ int main(int argc, char *argv[])
     const int inputSize = 50;
     unsigned long block_size = 8388608;
     unsigned long fftpoint = 0;
-    // unsigned long fftpoint = 33554432;
+    // fftpoint = 33554432;
+    fftpoint = 65536;
     float period = (float)block_size / bw;
     // Batch Size
-    int count = 64;
+    int count = 32;
     cout << "Batch Size: " << count << endl;
     cout << "Number of Streams: " << numStreams << endl;
 
@@ -93,10 +94,15 @@ int main(int argc, char *argv[])
 
     // Initialize output CPU memory space
     Complex **output_check = new Complex *[numStreams];
+    if (process_len * sizeof(Complex) * numStreams / 1024 / 1024 / 1024 > 16)
+    {
+        cout << "Memory Size Exceeds 16GB" << endl;
+        exit(1);
+    }
     for (int i = 0; i < numStreams; i++)
     {
         // output_check[i] = new Complex[signal_size];
-        cudaMallocHost((void **)&(output_check[i]), signal_size * sizeof(Complex));
+        cudaMallocHost((void **)&(output_check[i]), process_len * sizeof(Complex));
     }
     Complex *output[numStreams];
     for (int i = 0; i < numStreams; i++)
@@ -151,6 +157,8 @@ int main(int argc, char *argv[])
         threads.emplace_back(output_thread, output_check[i], output_stream[i], process_len, signal_size / process_len, &msosm, i);
     }
 
+    cout << "Output Bytes: " << signal_size * sizeof(Complex) * numStreams << endl;
+
     // Start the timer
     auto start = chrono::high_resolution_clock::now();
 
@@ -176,6 +184,7 @@ int main(int argc, char *argv[])
     auto stop = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
     cout << "Time taken (stream num: " << numStreams << "): " << duration.count() / 1000000.0 << " ms" << endl;
+    cout << "Tansfer speed requirement: " << signal_size * sizeof(Complex) * numStreams / (duration.count() / 1000000000.0) / 1024.0 / 1024.0 / 1024.0 * 8.0 << " Gbps" << endl;
 
     auto timedata = 1.0 / bw * signal_size * 1000;
     cout << "Real-time data time: " << timedata << " ms" << endl;
@@ -187,10 +196,10 @@ int main(int argc, char *argv[])
     // // if (numStreams > 1)
     // plot_abs(output[numStreams - 1], block_size);
 
-    for (int i = 0; i < numStreams; i++)
-    {
-        plot_abs(output_check[i], block_size);
-    }
-    show();
+    // for (int i = 0; i < numStreams; i++)
+    // {
+    //     plot_abs(output_check[i], block_size);
+    // }
+    // show();
     return 0;
 }
