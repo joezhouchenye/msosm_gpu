@@ -37,3 +37,5 @@ void plot_pol1(uint16_pair *signal, unsigned long size);
 void plot_pol2(uint16_pair *signal, unsigned long size);
 template <typename T>
 void plot(T *signal, unsigned long size);
+void plot_abs_concurrent_all(Complex *signal, int block_size, unsigned long size, int numDMs);
+void plot_abs_concurrent(Complex *signal, unsigned long block_size, unsigned long size, int numDMs, int index);

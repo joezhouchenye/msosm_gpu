@@ -33,6 +33,7 @@ set(MY_SOURCE_CPP_FILES
   ${PROJECT_SOURCE_DIR}/dedispersion/msosm_dm_loop/*.cpp
   ${PROJECT_SOURCE_DIR}/dedispersion/msosm_stream/*.cpp
   ${PROJECT_SOURCE_DIR}/dedispersion/msosm_dm_stream/*.cpp
+  ${PROJECT_SOURCE_DIR}/dedispersion/msosm_dm_concurrent/*.cpp
   ${PROJECT_SOURCE_DIR}/dedispersion/overlap_save/*.cpp
   ${PROJECT_SOURCE_DIR}/simulated_pulsar/*.cpp
 )
@@ -54,6 +55,7 @@ set(EXECTABLES
   multiple_stream_msosm
   multiple_dm_stream_msosm
   multiple_dm_loop_msosm
+  multiple_dm_concurrent_msosm
   # Add more executables here
 )
 

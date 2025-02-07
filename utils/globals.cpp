@@ -75,5 +75,43 @@ void plot(T *signal, unsigned long size)
     plt::plot(v_signal);
 }
 
-template void plot<float>(float*, unsigned long);
-template void plot<unsigned long>(unsigned long*, unsigned long);
+template void plot<float>(float *, unsigned long);
+template void plot<unsigned long>(unsigned long *, unsigned long);
+
+void plot_abs_concurrent_all(Complex *signal, int block_size, unsigned long size, int numDMs)
+{
+    vector<vector<float>> v_signal(numDMs, vector<float>(size));
+    int cycles = size / block_size;
+    Complex tmp;
+    for (int i = 0; i < cycles; i++)
+    {
+        for (int j = 0; j < numDMs; j++)
+        {
+            for (int k = 0; k < block_size; k++)
+            {
+                tmp = signal[i * (block_size * numDMs) + j * block_size + k];
+                v_signal.at(j).at(i * block_size + k) = sqrt(pow(tmp.x, 2) + pow(tmp.y, 2));
+            }
+        }
+    }
+    for (int i = 0; i < numDMs; i++)
+    {
+        plt::plot(v_signal.at(i));
+    }
+}
+
+void plot_abs_concurrent(Complex *signal, unsigned long block_size, unsigned long size, int numDMs, int index)
+{
+    vector<float> v_signal(size);
+    int cycles = size / block_size;
+    Complex tmp;
+    for (int i = 0; i < cycles; i++)
+    {
+        for (int k = 0; k < block_size; k++)
+        {
+            tmp = signal[i * (block_size * numDMs) + index * block_size + k];
+            v_signal.at(i * block_size + k) = sqrt(pow(tmp.x, 2) + pow(tmp.y, 2));
+        }
+    }
+    plt::plot(v_signal);
+}

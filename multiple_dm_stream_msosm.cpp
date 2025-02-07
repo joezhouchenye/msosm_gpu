@@ -13,7 +13,8 @@ void output_thread(Complex *dst, Complex *src, unsigned long process_len, int nu
             ;
         nvtxRangePush("Output Copy");
         src[process_len].x = 1;
-        memcpy(dst + count * process_len, src, process_len * sizeof(Complex));
+        memcpy(dst, src, process_len * sizeof(Complex));
+        // memcpy(dst + count * process_len, src, process_len * sizeof(Complex));
         count++;
         msosm->wait_for_cpu[stream_id] = false;
         nvtxRangePop();
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
     unsigned long block_size = 8388608;
     unsigned long fftpoint = 0;
     // fftpoint = 33554432;
-    fftpoint = 65536;
+    // fftpoint = 65536;
     float period = (float)block_size / bw;
     // Batch Size
     int count = 32;
