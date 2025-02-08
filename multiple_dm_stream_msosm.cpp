@@ -13,8 +13,8 @@ void output_thread(Complex *dst, Complex *src, unsigned long process_len, int nu
             ;
         nvtxRangePush("Output Copy");
         src[process_len].x = 1;
-        memcpy(dst, src, process_len * sizeof(Complex));
-        // memcpy(dst + count * process_len, src, process_len * sizeof(Complex));
+        // memcpy(dst, src, process_len * sizeof(Complex));
+        memcpy(dst + count * process_len, src, process_len * sizeof(Complex));
         count++;
         msosm->wait_for_cpu[stream_id] = false;
         nvtxRangePop();
@@ -95,15 +95,15 @@ int main(int argc, char *argv[])
 
     // Initialize output CPU memory space
     Complex **output_check = new Complex *[numStreams];
-    if (process_len * sizeof(Complex) * numStreams / 1024 / 1024 / 1024 > 16)
+    if (signal_size * sizeof(Complex) * numStreams / 1024 / 1024 / 1024 > 16)
     {
         cout << "Memory Size Exceeds 16GB" << endl;
         exit(1);
     }
     for (int i = 0; i < numStreams; i++)
     {
-        // output_check[i] = new Complex[signal_size];
-        cudaMallocHost((void **)&(output_check[i]), process_len * sizeof(Complex));
+        output_check[i] = new Complex[signal_size];
+        // cudaMallocHost((void **)&(output_check[i]), process_len * sizeof(Complex));
     }
     Complex *output[numStreams];
     for (int i = 0; i < numStreams; i++)
@@ -197,10 +197,10 @@ int main(int argc, char *argv[])
     // // if (numStreams > 1)
     // plot_abs(output[numStreams - 1], block_size);
 
-    // for (int i = 0; i < numStreams; i++)
-    // {
-    //     plot_abs(output_check[i], block_size);
-    // }
-    // show();
+    for (int i = 0; i < numStreams; i++)
+    {
+        plot_abs(output_check[i], block_size);
+    }
+    show();
     return 0;
 }

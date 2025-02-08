@@ -3,6 +3,7 @@
 using namespace std;
 
 static __global__ void ComplexMultiply_batch_kernel(Complex *a, Complex *b, Complex *block, int N, int count);
+static __global__ void ComplexMultiply_concurrent_batch_kernel(Complex *a, Complex *b, Complex *block, int N, int count, int numDMs);
 static __global__ void ComplexMultiplyDelay_batch_kernel(Complex *a, Complex *b, Complex *block, int *delay, int index, int delaycount, int N, int count);
 static __global__ void ComplexMultiplyDelay_concurrent_batch_kernel(Complex *a, Complex *b, Complex *block, int *delay, int index, int delay_block_size, int N, int count, int numDMs);
 static __global__ void DiscardSamples_batch_kernel(Complex *a, Complex *b, int M, int count);
@@ -42,6 +43,26 @@ static __global__ void ComplexMultiply_batch_kernel(Complex *a, Complex *b, Comp
     block[i] = cuCmulf(input1, input2);
     // block[i].x = a[i].x / N * b[i % N].x - a[i].y / N * b[i % N].y;
     // block[i].y = a[i].x / N * b[i % N].y + a[i].y / N * b[i % N].x;
+}
+
+void ComplexMultiply_concurrent_batch(Complex *a, Complex *b, int N, Complex *block, int count, int numDMs, cudaStream_t stream)
+{
+    const int block_size = BLOCK_SIZE;
+    const int grid_size = (N * count * numDMs + block_size - 1) / block_size;
+    ComplexMultiply_concurrent_batch_kernel<<<grid_size, block_size, 0, stream>>>(a, b, block, N, count, numDMs);
+    CUDA_CHECK(cudaGetLastError());
+}
+
+static __global__ void ComplexMultiply_concurrent_batch_kernel(Complex *a, Complex *b, Complex *block, int N, int count, int numDMs)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N * count * numDMs)
+        return;
+    Complex input1, input2;
+    input1.x = a[i % (N * count)].x / N;
+    input1.y = a[i % (N * count)].y / N;
+    input2 = b[i / (N * count) * N + i % N];
+    block[i] = cuCmulf(input1, input2);
 }
 
 void ComplexMultiplyDelay_batch(Complex *a, Complex *b, int N, Complex *block, int *delay, int delay_block_size, int index, int count)
@@ -268,8 +289,8 @@ static __global__ void uint16ToComplex_kernel(Complex *dst, uint16_t *src, size_
         return;
 
     uint32_t val = reinterpret_cast<uint32_t *>(src)[i];
-    uint16_t y = val & 0xFFFF;
-    uint16_t x = (val >> 16) & 0xFFFF;
+    uint16_t x = val & 0xFFFF;
+    uint16_t y = (val >> 16) & 0xFFFF;
 
     float fx = static_cast<float>(x) - 32768.0f * (x != 0);
     float fy = static_cast<float>(y) - 32768.0f * (y != 0);
@@ -299,9 +320,9 @@ static __global__ void complexToUint16_kernel(uint16_t *dst, Complex *src, size_
     if (i >= size)
         return;
     float2 val = reinterpret_cast<float2 *>(src)[i];
-    uint16_t y = static_cast<uint16_t>(val.y + 32768.0f * (val.y != 0));
     uint16_t x = static_cast<uint16_t>(val.x + 32768.0f * (val.x != 0));
-    uint32_t val32 = (x << 16) | y;
+    uint16_t y = static_cast<uint16_t>(val.y + 32768.0f * (val.y != 0));
+    uint32_t val32 = (y << 16) | x;
     reinterpret_cast<uint32_t *>(dst)[i] = val32;
     // dst[2 * i] = (src[i].x == 0) ? 0 : static_cast<uint16_t>(src[i].x + 32768.0f);
     // dst[2 * i + 1] = (src[i].y == 0) ? 0 : static_cast<uint16_t>(src[i].y + 32768.0f);

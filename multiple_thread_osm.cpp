@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
     plot_abs(output[0], block_size);
     if (numThreads > 1)
         plot_abs(output[numThreads - 1], block_size);
+    show();
 
     return 0;
 }

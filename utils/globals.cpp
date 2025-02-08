@@ -94,6 +94,17 @@ void plot_abs_concurrent_all(Complex *signal, int block_size, unsigned long size
             }
         }
     }
+    if (cycles == 0)
+    {
+        for (int i = 0; i < numDMs; i++)
+        {
+            for (int j = 0; j < size; j++)
+            {
+                tmp = signal[i * block_size + j];
+                v_signal.at(i).at(j) = sqrt(pow(tmp.x, 2) + pow(tmp.y, 2));
+            }
+        }
+    }
     for (int i = 0; i < numDMs; i++)
     {
         plt::plot(v_signal.at(i));

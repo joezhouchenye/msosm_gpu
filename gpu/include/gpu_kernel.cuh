@@ -18,6 +18,7 @@ void complexToUint16(uint16_t *dst, Complex *src, size_t size, cudaStream_t stre
 void calculateIntensity(Complex *a, Complex *b, float *total_intensity, unsigned long size, cudaStream_t stream);
 
 // Concurrent version
+void ComplexMultiply_concurrent_batch(Complex *a, Complex *b, int N, Complex *block, int count, int numDMs, cudaStream_t stream);
 void ComplexMultiplyDelay_concurrent_batch(Complex *a, Complex *b, int N, Complex *block, int *delay, int delay_block_size, int index, int count, int numDMs, cudaStream_t stream);
 void DiscardSamples_concurrent_batch(Complex *a, Complex *b, int M, int count, int numDMs, cudaStream_t stream);
 

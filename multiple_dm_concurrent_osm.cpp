@@ -1,10 +1,10 @@
 #include "globals.h"
-#include "msosm_gpu_concurrent.h"
+#include "osm_gpu_concurrent.h"
 #include "simulated_complex_signal.h"
 #include <fstream>
 #include <iomanip>
 
-void output_thread(Complex *dst, Complex *src, unsigned long process_len, int num_process, int numDMs, MSOSM_GPU_DM_concurrent *msosm)
+void output_thread(Complex *dst, Complex *src, unsigned long process_len, int num_process, int numDMs, OSM_GPU_DM_concurrent *osm)
 {
     int count = 0;
     bool flag = false;
@@ -18,12 +18,12 @@ void output_thread(Complex *dst, Complex *src, unsigned long process_len, int nu
         // memcpy(dst, src, process_len * numDMs * sizeof(Complex));
         memcpy(dst + count * process_len * numDMs, src, process_len * numDMs * sizeof(Complex));
         count++;
-        msosm->wait_for_cpu = false;
+        osm->wait_for_cpu = false;
         nvtxRangePop();
     }
 }
 
-// void output_thread_file(Complex *src, unsigned long process_len, int num_process, int numDMs, MSOSM_GPU_DM_concurrent *msosm)
+// void output_thread_file(Complex *src, unsigned long process_len, int num_process, int numDMs, OSM_GPU_DM_concurrent *osm)
 // {
 //     src[process_len * numDMs].x = 1;
 //     // Get the current time
@@ -76,12 +76,12 @@ void output_thread(Complex *dst, Complex *src, unsigned long process_len, int nu
 //         // memcpy(dst, src, process_len * numDMs * sizeof(Complex));
 //         // memcpy(dst + count * process_len * numDMs, src, process_len * numDMs * sizeof(Complex));
 //         count++;
-//         msosm->wait_for_cpu = false;
+//         osm->wait_for_cpu = false;
 //         nvtxRangePop();
 //     }
 // }
 
-void output_thread_file(uint16_pair *src, unsigned long process_len, int num_process, int numDMs, MSOSM_GPU_DM_concurrent *msosm)
+void output_thread_file(uint16_pair *src, unsigned long process_len, int num_process, int numDMs, OSM_GPU_DM_concurrent *osm)
 {
     src[process_len * numDMs].first = 1;
     // Get the current time
@@ -115,7 +115,7 @@ void output_thread_file(uint16_pair *src, unsigned long process_len, int num_pro
         //     outfile[i].write((char *)src + i * process_len * sizeof(uint16_pair), process_len * sizeof(uint16_pair));
         // }
         count++;
-        msosm->wait_for_cpu = false;
+        osm->wait_for_cpu = false;
         nvtxRangePop();
     }
 }
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 {
     verbose = false;
     int numDMs = 1;
-    int count = 8;
+    int count = 4;
     const struct option long_options[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"batch", required_argument, nullptr, 'b'},
@@ -153,13 +153,13 @@ int main(int argc, char *argv[])
     }
 
     // Pulsar signal parameters
-    float bw = 16e6;
-    float dm = 750;
+    float bw = 128e6;
+    float dm = 75;
     float f0 = 1e9;
     const int inputSize = 50;
     unsigned long block_size = 8388608;
     unsigned long fftpoint = 0;
-    // fftpoint = 33554432;
+    // fftpoint = 8388608;
     // fftpoint = 65536*4;
     float period = (float)block_size / bw;
     // Batch Size
@@ -184,13 +184,12 @@ int main(int argc, char *argv[])
     }
 
     // Initialize MSOSM_GPU_concurrent object
-    MSOSM_GPU_DM_concurrent msosm(bw_i, DM_i, f0_i, numDMs);
-    msosm.initialize_uint16(fftpoint, count);
+    OSM_GPU_DM_concurrent osm(bw_i, DM_i, f0_i, numDMs);
+    osm.initialize_uint16(fftpoint, count);
 
-    cout << "Filter length: " << msosm.M_common << endl;
-    cout << "Delay count: " << msosm.delaycount[0] << endl;
+    cout << "Filter length: " << osm.M_common << endl;
 
-    unsigned long M = msosm.M_common;
+    unsigned long M = osm.M_common;
     unsigned long process_len = count * M;
 
     cout << "Signal Size: " << signal_size << endl;
@@ -253,8 +252,8 @@ int main(int argc, char *argv[])
 
     vector<thread> threads;
 
-    // threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &msosm);
-    // threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &msosm);
+    // threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &osm);
+    // threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &osm);
     sleep(1);
 
     cout << "Output Bytes: " << signal_size * sizeof(Complex) * numDMs << endl;
@@ -265,15 +264,15 @@ int main(int argc, char *argv[])
     for (int i = 0; i < signal_size / process_len; i++)
     {
         current_input = input + i * process_len;
-        msosm.filter_block_uint16(current_input);
-        // msosm.get_output(output);
+        osm.filter_block_uint16(current_input);
+        // osm.get_output(output);
     }
 
     for (auto &t : threads)
     {
         t.join();
     }
-    msosm.synchronize();
+    osm.synchronize();
 
     // Stop the timer
     auto stop = chrono::high_resolution_clock::now();
@@ -285,7 +284,7 @@ int main(int argc, char *argv[])
     cout << "Real-time data time: " << timedata << " ms" << endl;
 
     // plot_abs_concurrent_all(output_check, process_len, block_size, numDMs);
-    // // plot_abs_concurrent(output_check+49*block_size*numDMs, process_len, block_size, numDMs, 1);
+    // // // plot_abs_concurrent(output_check+49*block_size*numDMs, process_len, block_size, numDMs, 1);
     // show();
     return 0;
 }
