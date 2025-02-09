@@ -142,15 +142,33 @@ int main(int argc, char *argv[])
         if (i == startcount)
         {
             cout << "Nd: " << msosm[index]->Nd[0] << endl;
-            unsigned long max_process_len = static_cast<unsigned long>(pow(2, endcount) * M);
+            unsigned long max_process_len;
+            if (startcount == -1)
+                max_process_len = count * M;
+            else
+                max_process_len = static_cast<unsigned long>(pow(2, endcount) * M);
             cout << "Max Process Length: " << max_process_len << endl;
+            cout << "Compared with OSM Process Length: " << osm_process_len << endl;
             // Generate simulated complex signal
             // Use different parameters here to reduce generation time,
             // since we only need to test the speed
             int inputSize;
             unsigned long block_size = 8388608;
             float period = (float)block_size / 16e6;
-            inputSize = osm_process_len / block_size;
+            // Assume max_process_len and block_size are powers of 2
+            inputSize = max_process_len / block_size;
+            if (inputSize == 0)
+                inputSize = 1;
+            if (inputSize > osm_process_len / block_size)
+            {
+                cout << "The compared OSM process length is too short" << endl;
+            }
+            else
+            {
+                inputSize = osm_process_len / block_size;
+                if (inputSize == 0)
+                    inputSize = 1;
+            }
             simulated_signal = new SimulatedComplexSignal(16e6, 75, f0, period, "uint16");
             simulated_signal->generate_pulsar_signal(inputSize, false, 0, false);
             signal_size = simulated_signal->signal_size;

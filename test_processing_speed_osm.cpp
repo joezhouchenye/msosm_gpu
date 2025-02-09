@@ -130,13 +130,18 @@ int main(int argc, char *argv[])
         osm[index] = new OSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
         if (startcount != -1)
             count = static_cast<unsigned long>(pow(2, i));
+        cout << "Batch Size: " << count << endl;
         osm[index]->initialize_uint16(fftpoint, count);
         unsigned long M = osm[index]->M_common;
         unsigned long process_len = count * M;
         if (i == startcount)
         {
             cout << "Nd: " << osm[index]->Nd[0] << endl;
-            unsigned long max_process_len = static_cast<unsigned long>(pow(2, endcount) * M);
+            unsigned long max_process_len;
+            if (startcount == -1)
+                max_process_len = count * M;
+            else
+                max_process_len = static_cast<unsigned long>(pow(2, endcount) * M);
             cout << "Max Process Length: " << max_process_len << endl;
             // Generate simulated complex signal
             // Use different parameters here to reduce generation time,
@@ -144,7 +149,10 @@ int main(int argc, char *argv[])
             int inputSize;
             unsigned long block_size = 8388608;
             float period = (float)block_size / 16e6;
-            inputSize = (max_process_len + max_process_len % block_size) / block_size;
+            // Assume max_process_len and block_size are powers of 2
+            inputSize = max_process_len / block_size;
+            if (inputSize == 0)
+                inputSize = 1;
             simulated_signal = new SimulatedComplexSignal(16e6, 75, f0, period, "uint16");
             simulated_signal->generate_pulsar_signal(inputSize, false, 0, false);
             signal_size = simulated_signal->signal_size;
