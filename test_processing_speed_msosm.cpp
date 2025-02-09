@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
             cout << "[" << mean << ", " << standard_deviation << "]" << ", ";
     }
 
-    auto timedata = 1.0 / bw * signal_size * repeat;
+    auto timedata = 1.0 / bw * signal_size * 1000;
     cout << "Real-time data time: " << timedata << " ms" << endl;
 
     return 0;
