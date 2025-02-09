@@ -122,6 +122,11 @@ void OSM_GPU_DM_concurrent::synchronize()
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
+void OSM_GPU_DM_concurrent::reset_device()
+{
+    CUDA_CHECK(cudaDeviceReset());
+}
+
 OSM_GPU_DM_concurrent::~OSM_GPU_DM_concurrent()
 {
     CUDA_CHECK(cudaDeviceReset());

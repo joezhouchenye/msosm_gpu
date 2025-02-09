@@ -37,7 +37,7 @@ SimulatedComplexSignal::SimulatedComplexSignal(float bw, float dm, float f0, flo
     }
 }
 
-void SimulatedComplexSignal::generate_pulsar_signal(unsigned long repeat, bool add_noise, float SNR)
+void SimulatedComplexSignal::generate_pulsar_signal(unsigned long repeat, bool add_noise, float SNR, bool pinned)
 {
     if (verbose)
         cout << "Generating pulsar signal" << endl;
@@ -50,10 +50,16 @@ void SimulatedComplexSignal::generate_pulsar_signal(unsigned long repeat, bool a
     }
 
     signal_size = repeat * Np;
-    cudaMallocHost((void **)&this->signal, sizeof(fftwf_complex) * signal_size);
+    if (pinned)
+        cudaMallocHost((void **)&this->signal, sizeof(fftwf_complex) * signal_size);
+    else
+        this->signal = (fftwf_complex *)malloc(sizeof(fftwf_complex) * signal_size);
     if (data_type == "uint16")
     {
-        cudaMallocHost((void **)&this->signal_u16, sizeof(uint16_pair) * signal_size);
+        if (pinned)
+            cudaMallocHost((void **)&this->signal_u16, sizeof(uint16_pair) * signal_size);
+        else
+            this->signal_u16 = (uint16_pair *)malloc(sizeof(uint16_pair) * signal_size);
     }
 
     range = static_cast<unsigned long>(ceil((float)Nd / (float)Np));

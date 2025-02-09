@@ -1,13 +1,27 @@
 cmake_minimum_required(VERSION 3.25)
 
 # Enforce C++ compiler for CUDA
-set(CMAKE_CUDA_HOST_COMPILER "/usr/bin/g++-12")
+# Check if /usr/bin/g++-12 exists
+execute_process(
+    COMMAND /usr/bin/g++-12 --version
+    RESULT_VARIABLE GPP_VERSION_CHECK_RESULT
+    OUTPUT_VARIABLE GPP_VERSION_OUTPUT
+    ERROR_QUIET
+)
+
+# If g++-12 exists, set CMAKE_CUDA_HOST_COMPILER
+if(GPP_VERSION_CHECK_RESULT EQUAL 0)
+    set(CMAKE_CUDA_HOST_COMPILER "/usr/bin/g++-12")
+else()
+    message(STATUS "g++-12 not found, not setting CMAKE_CUDA_HOST_COMPILER")
+endif()
+
 # Specify the maximum number of concurrent processes for building
 set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 
 # specify architecture for rtx 4060
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 89)
+  set(CMAKE_CUDA_ARCHITECTURES "86;89")
 endif()
 
 # get current folder name
@@ -58,6 +72,8 @@ set(EXECTABLES
   multiple_dm_loop_msosm
   multiple_dm_concurrent_msosm
   multiple_dm_concurrent_osm
+  test_processing_speed_msosm
+  test_processing_speed_osm
   # Add more executables here
 )
 

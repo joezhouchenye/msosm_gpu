@@ -160,6 +160,11 @@ void MSOSM_GPU_DM_concurrent::synchronize()
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
+void MSOSM_GPU_DM_concurrent::reset_device()
+{
+    CUDA_CHECK(cudaDeviceReset());
+}
+
 MSOSM_GPU_DM_concurrent::~MSOSM_GPU_DM_concurrent()
 {
     CUDA_CHECK(cudaDeviceReset());

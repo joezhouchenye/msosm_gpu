@@ -14,6 +14,7 @@ public:
     void get_output(Complex *output);
     void get_output(uint16_pair *output);
     void synchronize();
+    void reset_device();
     ~OSM_GPU_DM_concurrent();
 
 public:

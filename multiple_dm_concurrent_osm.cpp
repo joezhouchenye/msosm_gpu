@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
     }
 
     // Pulsar signal parameters
-    float bw = 128e6;
+    float bw = 16e6;
     float dm = 75;
     float f0 = 1e9;
     const int inputSize = 50;
