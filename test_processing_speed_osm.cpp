@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
     float bw = 16e6;
     float dm = 75;
     float f0 = 1e9;
+    unsigned long compare_process_len = 33554432;
     const struct option long_options[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"batch", required_argument, nullptr, 'b'},
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
         {"bw", required_argument, nullptr, 'w'},
         {"dm", required_argument, nullptr, 'd'},
         {"f0", required_argument, nullptr, 'f'},
+        {"compare", required_argument, nullptr, 'p'},
         {"repeat", required_argument, nullptr, 'r'},
         {nullptr, 0, nullptr, 0}};
 
@@ -56,6 +58,9 @@ int main(int argc, char *argv[])
             continue;
         case 'f':
             f0 = stof(optarg);
+            continue;
+        case 'p':
+            compare_process_len = stoul(optarg);
             continue;
         case 'r':
             repeat = stoi(optarg);
@@ -152,6 +157,16 @@ int main(int argc, char *argv[])
             inputSize = max_process_len / block_size;
             if (inputSize == 0)
                 inputSize = 1;
+            if (inputSize > compare_process_len / block_size)
+            {
+                cout << "The compared OSM process length is too short" << endl;
+            }
+            else
+            {
+                inputSize = compare_process_len / block_size;
+                if (inputSize == 0)
+                    inputSize = 1;
+            }
             simulated_signal = new SimulatedComplexSignal(16e6, 75, f0, period, "uint16");
             simulated_signal->generate_pulsar_signal(inputSize, false, 0, false);
             signal_size = simulated_signal->signal_size;
