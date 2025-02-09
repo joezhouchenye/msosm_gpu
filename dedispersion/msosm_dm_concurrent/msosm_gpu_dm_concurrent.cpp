@@ -38,6 +38,12 @@ void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int coun
     fftpoint = 2 * M_common;
     this->fftpoint = fftpoint;
     this->count = count;
+    if (verbose)
+    {
+        cout << "FFTPoint: " << fftpoint << endl;
+        cout << "Count: " << count << endl;
+        cout << "M_common: " << M_common << endl;
+    }
     // Create cuFTT plan
     int n[1] = {fftpoint};                    // 1D FFT Size
     int inembed[] = {(count + 1) * M_common}; // Input Size

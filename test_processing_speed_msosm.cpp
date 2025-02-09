@@ -10,7 +10,8 @@ int main(int argc, char *argv[])
     int numDMs = 1;
     int count = 4;
     int startcount = -1;
-    int endcount = 0;
+    int endcount = -1;
+    int repeat = 10;
     // Pulsar signal parameters
     float bw = 16e6;
     float dm = 75;
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
         {"dm", required_argument, nullptr, 'd'},
         {"f0", required_argument, nullptr, 'f'},
         {"compare", required_argument, nullptr, 'p'},
+        {"repeat", required_argument, nullptr, 'r'},
         {nullptr, 0, nullptr, 0}};
 
     for (;;)
@@ -61,6 +63,9 @@ int main(int argc, char *argv[])
         case 'p':
             osm_process_len = stoul(optarg);
             continue;
+        case 'r':
+            repeat = stoi(optarg);
+            continue;
         default:
             continue;
         case -1:
@@ -77,8 +82,6 @@ int main(int argc, char *argv[])
     if (startcount == -1)
     {
         // Use given count value
-        startcount = count;
-        endcount = count;
         cout << "Default batch size " << count << " is used" << endl;
     }
     else if ((startcount > endcount) || (startcount < 0))
@@ -124,16 +127,21 @@ int main(int argc, char *argv[])
     unsigned long signal_size = 0;
     uint16_pair *input;
 
+    double sum[endcount - startcount + 1] = {0};
+    double sum_of_squares[endcount - startcount + 1] = {0};
+
     for (int i = startcount; i <= endcount; i++)
     {
         int index = i - startcount;
         msosm[index] = new MSOSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
-        count = static_cast<unsigned long>(pow(2, i));
+        if (startcount != -1)
+            count = static_cast<unsigned long>(pow(2, i));
         msosm[index]->initialize_uint16(fftpoint, count);
         unsigned long M = msosm[index]->M_common;
         unsigned long process_len = count * M;
         if (i == startcount)
         {
+            cout << "Nd: " << msosm[index]->Nd[0] << endl;
             unsigned long max_process_len = static_cast<unsigned long>(pow(2, endcount) * M);
             cout << "Max Process Length: " << max_process_len << endl;
             // Generate simulated complex signal
@@ -170,36 +178,43 @@ int main(int argc, char *argv[])
             cout << "Host Memory Registration Failed" << endl;
             exit(1);
         }
-
-        uint16_pair *current_input;
-
-        // Start the timer
-        auto start = chrono::high_resolution_clock::now();
-
-        for (int i = 0; i < signal_size / process_len; i++)
+        for (int j = 0; j < repeat; j++)
         {
-            current_input = input + i * process_len;
-            msosm[index]->filter_block_uint16(current_input);
-        }
-        msosm[index]->synchronize();
+            uint16_pair *current_input;
 
-        // Stop the timer
-        auto stop = chrono::high_resolution_clock::now();
-        auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
+            // Start the timer
+            auto start = chrono::high_resolution_clock::now();
+
+            for (int k = 0; k < signal_size / process_len; k++)
+            {
+                current_input = input + k * process_len;
+                msosm[index]->filter_block_uint16(current_input);
+            }
+            msosm[index]->synchronize();
+
+            // Stop the timer
+            auto stop = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
+            sum[index] += duration.count() / 1000000.0;
+            sum_of_squares[index] += duration.count() / 1000000.0 * duration.count() / 1000000.0;
+        }
+        cudaHostUnregister(input);
+        msosm[index]->reset_device();
+        double mean = sum[index] / repeat;
+        double variance = (sum_of_squares[index] / repeat) - (mean * mean);
+        double standard_deviation = sqrt(variance);
         if (i == startcount)
         {
-            cout << "Time taken (ms):" << endl;
+            cout << "Time taken (ms) with " << repeat << " runs:" << endl;
             cout << "[";
         }
         if (i == endcount)
-            cout << duration.count() / 1000000.0 << "]" << endl;
+            cout << "[" << mean << ", " << standard_deviation << "]" << "]" << endl;
         else
-            cout << duration.count() / 1000000.0 << ", ";
-        cudaHostUnregister(input);
-        msosm[index]->reset_device();
+            cout << "[" << mean << ", " << standard_deviation << "]" << ", ";
     }
 
-    auto timedata = 1.0 / bw * signal_size * 1000;
+    auto timedata = 1.0 / bw * signal_size * repeat;
     cout << "Real-time data time: " << timedata << " ms" << endl;
 
     return 0;
