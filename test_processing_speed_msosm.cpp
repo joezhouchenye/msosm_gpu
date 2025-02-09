@@ -213,8 +213,9 @@ int main(int argc, char *argv[])
             // Stop the timer
             auto stop = chrono::high_resolution_clock::now();
             auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
-            sum[index] += duration.count() / 1000000.0;
-            sum_of_squares[index] += duration.count() / 1000000.0 * duration.count() / 1000000.0;
+            double time = duration.count() / 1000000.0;
+            sum[index] += time;
+            sum_of_squares[index] += time * time;
         }
         cudaHostUnregister(input);
         msosm[index]->reset_device();

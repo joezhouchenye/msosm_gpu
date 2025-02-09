@@ -130,7 +130,6 @@ int main(int argc, char *argv[])
         osm[index] = new OSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
         if (startcount != -1)
             count = static_cast<unsigned long>(pow(2, i));
-        cout << "Batch Size: " << count << endl;
         osm[index]->initialize_uint16(fftpoint, count);
         unsigned long M = osm[index]->M_common;
         unsigned long process_len = count * M;
@@ -199,8 +198,9 @@ int main(int argc, char *argv[])
             // Stop the timer
             auto stop = chrono::high_resolution_clock::now();
             auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
-            sum[index] += duration.count() / 1000000.0;
-            sum_of_squares[index] += duration.count() / 1000000.0 * duration.count() / 1000000.0;
+            double time = duration.count() / 1000000.0;
+            sum[index] += time;
+            sum_of_squares[index] += time * time;
         }
         cudaHostUnregister(input);
         osm[index]->reset_device();
