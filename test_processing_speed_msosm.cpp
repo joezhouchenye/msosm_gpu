@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
     float bw = 16e6;
     float dm = 75;
     float f0 = 1e9;
+    unsigned long fftpoint = 0;
     // Compare proces length with OSM
     unsigned long osm_process_len = 33554432;
     const struct option long_options[] = {
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
         {"bw", required_argument, nullptr, 'w'},
         {"dm", required_argument, nullptr, 'd'},
         {"f0", required_argument, nullptr, 'f'},
+        {"fftpoint", required_argument, nullptr, 'n'},
         {"compare", required_argument, nullptr, 'p'},
         {"repeat", required_argument, nullptr, 'r'},
         {nullptr, 0, nullptr, 0}};
@@ -59,6 +61,9 @@ int main(int argc, char *argv[])
             continue;
         case 'f':
             f0 = stof(optarg);
+            continue;
+        case 'n':
+            fftpoint = stoul(optarg);
             continue;
         case 'p':
             osm_process_len = stoul(optarg);
@@ -108,8 +113,6 @@ int main(int argc, char *argv[])
             }
         }
     }
-
-    unsigned long fftpoint = 0;
 
     float *bw_i, *DM_i, *f0_i;
     bw_i = new float[numDMs];

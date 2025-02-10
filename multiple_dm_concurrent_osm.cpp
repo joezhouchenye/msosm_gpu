@@ -125,10 +125,18 @@ int main(int argc, char *argv[])
     verbose = false;
     int numDMs = 1;
     int count = 4;
+    float bw = 128e6;
+    float dm = 615.566;
+    float f0 = 1e9;
+    unsigned long fftpoint = 0;
     const struct option long_options[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"batch", required_argument, nullptr, 'b'},
         {"channel", required_argument, nullptr, 'c'},
+        {"fftpoint", required_argument, nullptr, 'n'},
+        {"bw", required_argument, nullptr, 'w'},
+        {"dm", required_argument, nullptr, 'd'},
+        {"f0", required_argument, nullptr, 'f'},
         {nullptr, 0, nullptr, 0}};
 
     for (;;)
@@ -144,6 +152,18 @@ int main(int argc, char *argv[])
         case 'c':
             numDMs = stoi(optarg);
             continue;
+        case 'n':
+            fftpoint = stoul(optarg);
+            continue;
+        case 'w':
+            bw = stof(optarg);
+            continue;
+        case 'd':
+            dm = stof(optarg);
+            continue;
+        case 'f':
+            f0 = stof(optarg);
+            continue;
         default:
             continue;
         case -1:
@@ -153,14 +173,8 @@ int main(int argc, char *argv[])
     }
 
     // Pulsar signal parameters
-    float bw = 128e6;
-    float dm = 615.566;
-    float f0 = 1e9;
     const int inputSize = 16;
     unsigned long block_size = 8388608 * 2;
-    unsigned long fftpoint = 0;
-    // fftpoint = 8388608;
-    // fftpoint = 65536*4;
     float period = (float)block_size / bw;
     // Batch Size
     cout << "Batch Size: " << count << endl;
