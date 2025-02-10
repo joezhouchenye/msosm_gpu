@@ -153,11 +153,11 @@ int main(int argc, char *argv[])
     }
 
     // Pulsar signal parameters
-    float bw = 16e6;
-    float dm = 75;
+    float bw = 128e6;
+    float dm = 615.566;
     float f0 = 1e9;
-    const int inputSize = 50;
-    unsigned long block_size = 8388608;
+    const int inputSize = 16;
+    unsigned long block_size = 8388608 * 2;
     unsigned long fftpoint = 0;
     // fftpoint = 8388608;
     // fftpoint = 65536*4;
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 
     vector<thread> threads;
 
-    // threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &osm);
+    threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &osm);
     // threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &osm);
     sleep(1);
 
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
     {
         current_input = input + i * process_len;
         osm.filter_block_uint16(current_input);
-        // osm.get_output(output);
+        osm.get_output(output);
     }
 
     for (auto &t : threads)
@@ -286,5 +286,17 @@ int main(int argc, char *argv[])
     // plot_abs_concurrent_all(output_check, process_len, block_size, numDMs);
     // // // plot_abs_concurrent(output_check+49*block_size*numDMs, process_len, block_size, numDMs, 1);
     // show();
+    
+    // For single DM test
+    float *data = new float[block_size];
+    for (int i = 0; i < block_size; i++)
+    {
+        data[i] = sqrt(pow(output_check[i].x, 2) + pow(output_check[i].y, 2));
+    }
+
+    ofstream outfile("data.bin", ios::binary | ios::out);
+    outfile.write((char *)data, block_size * sizeof(float));
+    outfile.close();
+
     return 0;
 }
