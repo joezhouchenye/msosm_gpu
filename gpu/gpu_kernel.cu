@@ -177,11 +177,11 @@ static __global__ void ComplexMultiplyDelay_concurrent_batch_kernel(Complex *a, 
         
         // 计算延迟调整后的索引j
         int j = (index + count_idx + delay_val) % delay_block_size;
-        int j_div_count = j / count;
-        int j_mod_count = j % count;
+        unsigned long j_div_count = j / count;
+        unsigned long j_mod_count = j % count;
         
         // 计算目标内存位置
-        int block_offset = (j_div_count * numDMs + dm_idx) * (count * N) + j_mod_count * N + n_idx;
+        unsigned long block_offset = (j_div_count * numDMs + dm_idx) * (count * N) + j_mod_count * N + n_idx;
         
         // 向量化读取输入数据
         float2 a_val = a_float2[a_base + n_idx];

@@ -58,6 +58,7 @@ public:
     void filter_block_uint16(uint16_pair *input);
     void get_output(Complex **output);
     void synchronize();
+    void reset_device();
     ~MSOSM_GPU_DM_BATCH_stream();
 
 private:

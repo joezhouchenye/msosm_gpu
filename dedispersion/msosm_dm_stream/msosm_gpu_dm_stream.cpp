@@ -170,44 +170,17 @@ void MSOSM_GPU_DM_BATCH_stream::get_output(Complex **output)
 
 void MSOSM_GPU_DM_BATCH_stream::synchronize()
 {
-    for (int i = 0; i < numStreams; i++)
-    {
-        CUDA_CHECK(cudaStreamSynchronize(stream[i]));
-    }
-    for (int i = 0; i < numStreams; i++)
-    {
-        CUDA_CHECK(cudaStreamDestroy(stream[i]));
-    }
-    CUDA_CHECK(cudaStreamDestroy(fft_stream));
-    for (int i = 0; i < numStreams; i++)
-    {
-        CUDA_CHECK(cudaEventDestroy(stream_event[i]));
-    }
-    CUDA_CHECK(cudaEventDestroy(fft_event));
-    CUDA_CHECK(cudaFree(input_buffer_d));
-    CUDA_CHECK(cudaFree(input_buffer_int16_d));
-    CUDA_CHECK(cudaFree(fft_block_d));
-    for (int i = 0; i < numStreams; i++)
-    {
-        CUDA_CHECK(cudaFree(ifft_block_d[i]));
-    }
-    for (int i = 0; i < numStreams; i++)
-    {
-        CUDA_CHECK(cudaFree(delay_block_d[i]));
-    }
-    for (int i = 0; i < numStreams; i++)
-    {
-        CUDA_CHECK(cudaFree(output_buffer_d[i]));
-    }
+    CUDA_CHECK(cudaDeviceSynchronize());
+}
+
+void MSOSM_GPU_DM_BATCH_stream::reset_device()
+{
+    CUDA_CHECK(cudaDeviceReset());
 }
 
 MSOSM_GPU_DM_BATCH_stream::~MSOSM_GPU_DM_BATCH_stream()
 {
-    cufftDestroy(p_f);
-    for (int i = 0; i < numStreams; i++)
-    {
-        cufftDestroy(p_b[i]);
-    }
+    CUDA_CHECK(cudaDeviceReset());
 }
 
 int MSOSM_GPU_DM_BATCH_stream::next_power_of_2(int n)

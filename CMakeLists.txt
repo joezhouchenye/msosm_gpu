@@ -75,6 +75,7 @@ set(EXECTABLES
   test_processing_speed_msosm
   test_processing_speed_osm
   test_multiple_dm_msosm_fused
+  test_multiple_dm_msosm_stream
   # Add more executables here
 )
 
