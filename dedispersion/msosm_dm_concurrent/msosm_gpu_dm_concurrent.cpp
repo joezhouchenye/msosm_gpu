@@ -19,7 +19,7 @@ void MSOSM_GPU_DM_concurrent::get_device_info()
     GPU_GetDevInfo();
 }
 
-void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int count)
+void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int count, unsigned long input_size)
 {
     if (verbose)
     {
@@ -37,6 +37,8 @@ void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int coun
     }
     fftpoint = 2 * M_common;
     this->fftpoint = fftpoint;
+    if (input_size != 0)
+        count = input_size / M_common;
     this->count = count;
     if (verbose)
     {

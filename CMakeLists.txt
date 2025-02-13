@@ -74,6 +74,8 @@ set(EXECTABLES
   multiple_dm_concurrent_osm
   test_processing_speed_msosm
   test_processing_speed_osm
+  test_processing_speed_msosm_batch32_dm0to100
+  test_processing_speed_osm_batch1_dm0to100
   test_multiple_dm_msosm_fused
   test_multiple_dm_msosm_stream
   # Add more executables here
