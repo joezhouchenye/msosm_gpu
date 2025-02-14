@@ -1,57 +1,23 @@
 #include "globals.h"
-#include "msosm_gpu_concurrent.h"
+#include "osm_gpu_concurrent.h"
 #include "simulated_complex_signal.h"
 #include <fstream>
 #include <iomanip>
-#include <sstream> // 用于字符串流
-#include <string>  // 用于字符串操作
-
-// 解析字符串并返回整数数组
-std::vector<unsigned long> parseArray(const std::string &input)
-{
-    std::vector<unsigned long> numbers;
-    std::string processedInput = input;
-
-    // 去掉方括号
-    processedInput.erase(0, 1);                      // 移除开头的 '['
-    processedInput.erase(processedInput.size() - 1); // 移除结尾的 ']'
-
-    // 分割字符串，根据逗号进行分割
-    size_t pos = 0;
-    while ((pos = processedInput.find(',')) != std::string::npos)
-    {
-        std::string token = processedInput.substr(0, pos);
-        numbers.push_back(std::stoul(token)); // 将字符串转换为整数并添加到数组
-        processedInput.erase(0, pos + 1);     // 移除已处理的部分
-    }
-
-    // 处理最后一个数字
-    if (!processedInput.empty())
-    {
-        numbers.push_back(std::stoul(processedInput)); // 转换最后一个数字
-    }
-
-    return numbers; // 返回解析后的整数数组
-}
 
 int main(int argc, char *argv[])
 {
     verbose = false;
     int numDMs = 1;
-    int count = 32;
-    int startdm = -1;
-    int enddm = -1;
-    int dmcount = 10;
-    float dmstep = 0;
+    int count = 1;
+    int startnumDM = -1;
+    int endnumDM = -1;
     int repeat = 10;
-    string input_size_string = "0";
     // Pulsar signal parameters
     float bw = 128e6;
-    float dm = 75;
+    float dm = 100;
     float f0 = 1e9;
     unsigned long fftpoint = 0;
-    // Compare proces length with OSM
-    unsigned long osm_process_len = 268435456;
+    unsigned long compare_process_len = 268435456;
     const struct option long_options[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"batch", required_argument, nullptr, 'b'},
@@ -65,7 +31,6 @@ int main(int argc, char *argv[])
         {"fftpoint", required_argument, nullptr, 'n'},
         {"compare", required_argument, nullptr, 'p'},
         {"repeat", required_argument, nullptr, 'r'},
-        {"size", required_argument, nullptr, 'i'},
         {nullptr, 0, nullptr, 0}};
 
     for (;;)
@@ -82,10 +47,10 @@ int main(int argc, char *argv[])
             numDMs = stoi(optarg);
             continue;
         case 's':
-            startdm = stoi(optarg);
+            startnumDM = stoi(optarg);
             continue;
         case 'e':
-            enddm = stoi(optarg);
+            endnumDM = stoi(optarg);
             continue;
         case 'w':
             bw = stof(optarg);
@@ -100,13 +65,10 @@ int main(int argc, char *argv[])
             fftpoint = stoul(optarg);
             continue;
         case 'p':
-            osm_process_len = stoul(optarg);
+            compare_process_len = stoul(optarg);
             continue;
         case 'r':
             repeat = stoi(optarg);
-            continue;
-        case 'i':
-            input_size_string = optarg;
             continue;
         default:
             continue;
@@ -120,109 +82,73 @@ int main(int argc, char *argv[])
     cout << "Dispersion measure: " << dm << " pc cm^-3" << endl;
     cout << "Start frequency: " << f0 / 1e6 << " MHz" << endl;
 
-    // DM values
-    if (startdm == -1)
+    // DM trial number
+    if (startnumDM == -1)
     {
-        // Use given DM value
-        cout << "Default DM value " << dm << " is used" << endl;
-        dmcount = 1;
+        // Use given numDMs value
+        cout << "Default numDMs " << numDMs << " is used" << endl;
     }
-    else if ((startdm > enddm) || (startdm < 0))
+    else if ((startnumDM > endnumDM) || (startnumDM < 0))
     {
-        cout << "Invalid DM range" << endl;
+        cout << "Invalid numDMs range" << endl;
         exit(1);
     }
     else
     {
-        dmstep = (enddm - startdm) / (dmcount - 1);
-        cout << "DM step: " << dmstep << " pc cm^-3" << endl;
-        cout << "DM Range:" << endl;
-        for (int i = 1; i <= dmcount; i++)
+        cout << "numDMs Range:" << endl;
+        for (int i = startnumDM; i <= endnumDM; i++)
         {
-            if (i == 1)
+            if (i == startnumDM)
             {
-                cout << "[" << startdm << ", ";
+                cout << "[" << i << ", ";
             }
-            else if (i == dmcount)
+            else if (i == endnumDM)
             {
-                cout << enddm << "]" << endl;
+                cout << i << "]" << endl;
             }
             else
             {
-                cout << startdm + (i - 1) * dmstep << ", ";
+                cout << i << ", ";
             }
         }
     }
 
-    vector<unsigned long> input_size;
-    int *count_input;
-    unsigned long *fft_point_i;
-    if (input_size_string != "0")
-    {
-        input_size = parseArray(input_size_string);
-        // Get the length of input_size
-        int input_size_len = input_size.size();
-
-        for (int i = 0; i < dmcount; i++)
-        {
-            if (i == 0)
-                cout << "Input size: " << "[";
-            if (i == dmcount - 1)
-                cout << input_size[i] << "]" << endl;
-            else
-                cout << input_size[i] << ", ";
-        }
-        if (input_size_len != dmcount)
-        {
-            cout << "Wrong input size" << endl;
-            exit(1);
-        }
-        count_input = new int[dmcount];
-        fft_point_i = new unsigned long[dmcount];
-    }
-
-    MSOSM_GPU_DM_concurrent *msosm[dmcount];
+    OSM_GPU_DM_concurrent *osm[endnumDM - startnumDM + 1];
     SimulatedComplexSignal *simulated_signal;
     unsigned long signal_size = 0;
     uint16_pair *input;
 
-    double sum[dmcount] = {0};
-    double sum_of_squares[dmcount] = {0};
+    double sum[endnumDM - startnumDM + 1] = {0};
+    double sum_of_squares[endnumDM - startnumDM + 1] = {0};
 
-    for (int i = 1; i <= dmcount; i++)
+    for (int i = startnumDM; i <= endnumDM; i++)
     {
-        int index = i - 1;
+        int index = i - startnumDM;
+        if (startnumDM != -1)
+            numDMs = static_cast<unsigned long>(pow(2, i));
         float *bw_i, *DM_i, *f0_i;
         bw_i = new float[numDMs];
         DM_i = new float[numDMs];
         f0_i = new float[numDMs];
-        for (int j = 0; j < numDMs; j++)
+        for (int i = 0; i < numDMs; i++)
         {
-            bw_i[j] = bw;
-            if (startdm != -1)
-                dm = startdm + (i - 1) * dmstep;
-            DM_i[j] = dm;
-            f0_i[j] = f0;
+            bw_i[i] = bw;
+            if (numDMs != 1)
+                DM_i[i] = dm - 99.0f / (numDMs - 1);
+            else
+                DM_i[i] = dm;
+            f0_i[i] = f0;
         }
-        msosm[index] = new MSOSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
-        if (input_size_string != "0")
-        {
-            msosm[index]->initialize_uint16(fftpoint, count, input_size[index], true);
-            count = msosm[index]->count;
-            fft_point_i[index] = msosm[index]->M_common * 2;
-            count_input[index] = count;
-        }
-        else
-            msosm[index]->initialize_uint16(fftpoint, count, 0, true);
-        unsigned long M = msosm[index]->M_common;
+        osm[index] = new OSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
+        osm[index]->initialize_uint16(fftpoint, count, true);
+        unsigned long M = osm[index]->M_common;
         unsigned long process_len = count * M;
-        if (i == 1)
+        if (i == startnumDM)
         {
-            cout << "Nd: " << msosm[index]->Nd[0] << endl;
+            cout << "Nd: " << osm[index]->Nd[0] << endl;
             unsigned long max_process_len;
             max_process_len = count * M;
             cout << "Max Process Length: " << max_process_len << endl;
-            cout << "Compared with OSM Process Length: " << osm_process_len << endl;
             // Generate simulated complex signal
             // Use different parameters here to reduce generation time,
             // since we only need to test the speed
@@ -233,13 +159,13 @@ int main(int argc, char *argv[])
             inputSize = max_process_len / block_size;
             if (inputSize == 0)
                 inputSize = 1;
-            if (inputSize > osm_process_len / block_size)
+            if (inputSize > compare_process_len / block_size)
             {
                 cout << "The compared OSM process length is too short" << endl;
             }
             else
             {
-                inputSize = osm_process_len / block_size;
+                inputSize = compare_process_len / block_size;
                 if (inputSize == 0)
                     inputSize = 1;
             }
@@ -248,10 +174,6 @@ int main(int argc, char *argv[])
             signal_size = simulated_signal->signal_size;
             cout << "Signal Size: " << signal_size << endl;
             input = simulated_signal->signal_u16;
-        }
-        if (process_len > signal_size)
-        {
-            cout << "Warning: Process length " << process_len << " is larger than signal size" << endl;
         }
         cudaError_t error;
         error = cudaHostRegister(input, signal_size * sizeof(uint16_pair), cudaHostRegisterDefault);
@@ -274,8 +196,10 @@ int main(int argc, char *argv[])
             cout << "Host Memory Registration Failed" << endl;
             exit(1);
         }
+
         for (int j = 0; j < repeat; j++)
         {
+
             uint16_pair *current_input;
 
             // Start the timer
@@ -284,10 +208,10 @@ int main(int argc, char *argv[])
             for (int k = 0; k < signal_size / process_len; k++)
             {
                 current_input = input + k * process_len;
-                msosm[index]->filter_block_uint16(current_input);
-                msosm[index]->get_output(output);
+                osm[index]->filter_block_uint16(current_input);
+                osm[index]->get_output(output);
             }
-            msosm[index]->synchronize();
+            osm[index]->synchronize();
 
             // Stop the timer
             auto stop = chrono::high_resolution_clock::now();
@@ -297,49 +221,19 @@ int main(int argc, char *argv[])
             sum_of_squares[index] += time * time;
         }
         cudaHostUnregister(input);
-        msosm[index]->reset_device();
+        osm[index]->reset_device();
         double mean = sum[index] / repeat;
-        double variance = (sum_of_squares[index] / repeat) - (mean * mean);
+        double variance = sum_of_squares[index] / repeat - mean * mean;
         double standard_deviation = sqrt(variance);
-        if (i == 1)
+        if (i == startnumDM)
         {
             cout << "Time taken (ms) with " << repeat << " runs:" << endl;
             cout << "[";
         }
-        if (i == dmcount)
+        if (i == endnumDM)
             cout << "[" << mean << ", " << standard_deviation << "]" << "]" << endl;
         else
             cout << "[" << mean << ", " << standard_deviation << "]" << ", ";
-    }
-
-    if (input_size_string != "0")
-    {
-        cout << "Batch Size:" << endl;
-        for (int i = 0; i < dmcount; i++)
-        {
-            if (i == 0)
-                cout << "[";
-            if (i == dmcount - 1)
-                cout << count_input[i] << "]" << endl;
-            else
-                cout << count_input[i] << ", ";
-        }
-
-        cout << "FFT length:" << endl;
-        for (int i = 0; i < dmcount; i++)
-        {
-            if (i == 0)
-                cout << "[";
-            if (i == dmcount - 1)
-                cout << fft_point_i[i] << "]" << endl;
-            else
-                cout << fft_point_i[i] << ", ";
-        }
-    }
-    else
-    {
-        cout << "Batch Size: " << count << endl;
-        cout << "FFT length: " << 2 * msosm[0]->M_common << endl;
     }
 
     auto timedata = 1.0 / bw * signal_size * 1000;

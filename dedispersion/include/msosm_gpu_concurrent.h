@@ -17,7 +17,7 @@ class MSOSM_GPU_DM_concurrent : public Prepare_MSOSM_DM_concurrent
 public:
     MSOSM_GPU_DM_concurrent(float *bw, float *dm, float *f0, int numDMs);
     void get_device_info();
-    void initialize_uint16(unsigned long fftpoint, int count = 1, unsigned long input_size=0);
+    void initialize_uint16(unsigned long fftpoint, int count = 1, unsigned long input_size=0, bool compute_only=false);
     void filter_block_uint16(uint16_pair *input);
     void get_output(Complex *output);
     void get_output(uint16_pair *output);
@@ -26,6 +26,7 @@ public:
     ~MSOSM_GPU_DM_concurrent();
 
 private:
+    bool compute_only;
     int next_power_of_2(int n);
 
 private:

@@ -121,6 +121,9 @@ int main(int argc, char *argv[])
         }
     }
 
+    unsigned long *fft_point_i;
+    fft_point_i = new unsigned long[dmcount];
+
     OSM_GPU_DM_concurrent *osm[dmcount];
     SimulatedComplexSignal *simulated_signal;
     unsigned long signal_size = 0;
@@ -148,6 +151,7 @@ int main(int argc, char *argv[])
         osm[index]->initialize_uint16(fftpoint, count);
         unsigned long M = osm[index]->M_common;
         unsigned long process_len = count * M;
+        fft_point_i[index] = M * 2;
         if (i == 1)
         {
             cout << "Nd: " << osm[index]->Nd[0] << endl;
@@ -192,14 +196,14 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        Complex *output;
-        output = (Complex *)malloc((numDMs * process_len + 1) * sizeof(Complex));
+        uint16_pair *output;
+        output = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(uint16_pair));
         if (output == NULL)
         {
             cout << "Memory Allocation Failed" << endl;
             exit(1);
         }
-        error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(Complex), cudaHostRegisterDefault);
+        error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
         if (error != cudaSuccess)
         {
             cout << "Host Memory Registration Failed" << endl;
@@ -254,6 +258,18 @@ int main(int argc, char *argv[])
         else
             cout << osm[i]->M_common * count << ", ";
     }
+
+    cout << "Batch Size: " << count << endl;
+    cout << "FFT Point:" << endl;
+    for (int i = 0; i < dmcount; i++)
+    {
+        if (i == 0)
+            cout << "[";
+        if (i == dmcount - 1)
+            cout << fft_point_i[i] << "]" << endl;
+        else
+            cout << fft_point_i[i] << ", ";
+    } 
 
     auto timedata = 1.0 / bw * signal_size * 1000;
     cout << "Real-time data time: " << timedata << " ms" << endl;

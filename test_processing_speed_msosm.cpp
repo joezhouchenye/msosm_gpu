@@ -13,12 +13,12 @@ int main(int argc, char *argv[])
     int endcount = -1;
     int repeat = 10;
     // Pulsar signal parameters
-    float bw = 16e6;
+    float bw = 128e6;
     float dm = 75;
     float f0 = 1e9;
     unsigned long fftpoint = 0;
     // Compare proces length with OSM
-    unsigned long osm_process_len = 33554432;
+    unsigned long osm_process_len = 268435456;
     const struct option long_options[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"batch", required_argument, nullptr, 'b'},
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
         msosm[index] = new MSOSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
         if (startcount != -1)
             count = static_cast<unsigned long>(pow(2, i));
-        msosm[index]->initialize_uint16(fftpoint, count);
+        msosm[index]->initialize_uint16(fftpoint, count, 0, true);
         unsigned long M = msosm[index]->M_common;
         unsigned long process_len = count * M;
         if (i == startcount)
@@ -186,14 +186,14 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        Complex *output;
-        output = (Complex *)malloc((numDMs * process_len + 1) * sizeof(Complex));
+        uint16_pair *output;
+        output = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(uint16_pair));
         if (output == NULL)
         {
             cout << "Memory Allocation Failed" << endl;
             exit(1);
         }
-        error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(Complex), cudaHostRegisterDefault);
+        error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
         if (error != cudaSuccess)
         {
             cout << "Host Memory Registration Failed" << endl;
@@ -210,6 +210,7 @@ int main(int argc, char *argv[])
             {
                 current_input = input + k * process_len;
                 msosm[index]->filter_block_uint16(current_input);
+                msosm[index]->get_output(output);
             }
             msosm[index]->synchronize();
 

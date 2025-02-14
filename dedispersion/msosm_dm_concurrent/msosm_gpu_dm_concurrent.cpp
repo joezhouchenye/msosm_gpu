@@ -19,7 +19,7 @@ void MSOSM_GPU_DM_concurrent::get_device_info()
     GPU_GetDevInfo();
 }
 
-void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int count, unsigned long input_size)
+void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int count, unsigned long input_size, bool compute_only)
 {
     if (verbose)
     {
@@ -73,6 +73,7 @@ void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int coun
     CUDA_CHECK(cudaMalloc((void **)&output_buffer_d, (numDMs * count * M_common + 1) * sizeof(Complex)));
     cudaMemset(output_buffer_d + numDMs * count * M_common, 0, sizeof(Complex));
 
+    this->compute_only = compute_only;
     CUDA_CHECK(cudaMalloc((void **)&output_buffer_uint16_d, (numDMs * count * M_common + 1) * sizeof(uint16_pair)));
     cudaMemset(output_buffer_uint16_d + numDMs * count * M_common, 0, sizeof(uint16_pair));
 
@@ -143,9 +144,12 @@ void MSOSM_GPU_DM_concurrent::filter_block_uint16(uint16_pair *input)
 void MSOSM_GPU_DM_concurrent::get_output(Complex *output)
 {
     cudaEventRecord(ready_event, dm_stream);
-    while (wait_for_cpu)
-        ;
-    wait_for_cpu = true;
+    if (!compute_only)
+    {
+        while (wait_for_cpu)
+            ;
+        wait_for_cpu = true;
+    }
     cudaStreamWaitEvent(output_stream, ready_event, 0);
     CUDA_CHECK(cudaMemcpyAsync(output, output_buffer_d, (count * M_common * numDMs + 1) * sizeof(Complex), cudaMemcpyDeviceToHost, output_stream));
     cudaEventRecord(output_event, output_stream);
@@ -155,9 +159,12 @@ void MSOSM_GPU_DM_concurrent::get_output(uint16_pair *output)
 {
     complexToUint16((uint16_t *)output_buffer_uint16_d, output_buffer_d, count * M_common * numDMs, dm_stream);
     cudaEventRecord(ready_event, dm_stream);
-    while (wait_for_cpu)
-        ;
-    wait_for_cpu = true;
+    if (!compute_only)
+    {
+        while (wait_for_cpu)
+            ;
+        wait_for_cpu = true;
+    }
     cudaStreamWaitEvent(output_stream, ready_event, 0);
     CUDA_CHECK(cudaMemcpyAsync(output, output_buffer_uint16_d, (count * M_common * numDMs + 1) * sizeof(uint16_pair), cudaMemcpyDeviceToHost, output_stream));
     cudaEventRecord(output_event, output_stream);

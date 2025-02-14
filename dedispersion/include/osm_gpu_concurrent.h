@@ -9,7 +9,7 @@ class OSM_GPU_DM_concurrent : public Prepare_OSM_DM_concurrent
 public:
     OSM_GPU_DM_concurrent(float *bw, float *dm, float *f0, int numDMs);
     void get_device_info();
-    void initialize_uint16(unsigned long fftpoint = 0, int count = 1);
+    void initialize_uint16(unsigned long fftpoint = 0, int count = 1, bool compute_only=false);
     void filter_block_uint16(uint16_pair *input);
     void get_output(Complex *output);
     void get_output(uint16_pair *output);
@@ -22,6 +22,7 @@ public:
     bool wait_for_cpu;
 
 private:
+    bool compute_only;
     Complex *output_buffer_d;
     unsigned long fftpoint;
     Complex *input_buffer_d;
