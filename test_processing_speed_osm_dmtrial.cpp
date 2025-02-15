@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     }
 
     cout << "Bandwidth: " << bw / 1e6 << " MHz" << endl;
-    cout << "Dispersion measure: " << dm << " pc cm^-3" << endl;
+    cout << "Max Dispersion measure: " << dm << " pc cm^-3" << endl;
     cout << "Start frequency: " << f0 / 1e6 << " MHz" << endl;
 
     // DM trial number
@@ -130,14 +130,15 @@ int main(int argc, char *argv[])
         bw_i = new float[numDMs];
         DM_i = new float[numDMs];
         f0_i = new float[numDMs];
-        for (int i = 0; i < numDMs; i++)
+        for (int j = 0; j < numDMs; j++)
         {
-            bw_i[i] = bw;
-            if (numDMs != 1)
-                DM_i[i] = dm - 99.0f / (numDMs - 1);
-            else
-                DM_i[i] = dm;
-            f0_i[i] = f0;
+            bw_i[j] = bw;
+            if (j == 0)
+                DM_i[j] = dm;
+            else if (numDMs != 1)
+                // DM_i[j] = DM_i[j - 1] - 99.0f / (numDMs - 1);
+                DM_i[j] = DM_i[j - 1] - 1;
+            f0_i[j] = f0;
         }
         osm[index] = new OSM_GPU_DM_concurrent(bw_i, DM_i, f0_i, numDMs);
         osm[index]->initialize_uint16(fftpoint, count, true);
