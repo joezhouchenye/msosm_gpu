@@ -4,24 +4,24 @@
 #include <fstream>
 #include <iomanip>
 
-void output_thread(Complex *dst, Complex *src, unsigned long process_len, int num_process, int numDMs, OSM_GPU_DM_concurrent *osm)
-{
-    int count = 0;
-    bool flag = false;
-    src[process_len * numDMs].x = 1;
-    while (count < num_process)
-    {
-        while (src[process_len * numDMs].x == 1)
-            ;
-        nvtxRangePush("Output Copy");
-        src[process_len * numDMs].x = 1;
-        // memcpy(dst, src, process_len * numDMs * sizeof(Complex));
-        memcpy(dst + count * process_len * numDMs, src, process_len * numDMs * sizeof(Complex));
-        count++;
-        osm->wait_for_cpu = false;
-        nvtxRangePop();
-    }
-}
+// void output_thread(Complex *dst, Complex *src, unsigned long process_len, int num_process, int numDMs, OSM_GPU_DM_concurrent *osm)
+// {
+//     int count = 0;
+//     bool flag = false;
+//     src[process_len * numDMs].x = 1;
+//     while (count < num_process)
+//     {
+//         while (src[process_len * numDMs].x == 1)
+//             ;
+//         nvtxRangePush("Output Copy");
+//         src[process_len * numDMs].x = 1;
+//         // memcpy(dst, src, process_len * numDMs * sizeof(Complex));
+//         memcpy(dst + count * process_len * numDMs, src, process_len * numDMs * sizeof(Complex));
+//         count++;
+//         osm->wait_for_cpu = false;
+//         nvtxRangePop();
+//     }
+// }
 
 // void output_thread_file(Complex *src, unsigned long process_len, int num_process, int numDMs, OSM_GPU_DM_concurrent *osm)
 // {
@@ -110,10 +110,10 @@ void output_thread_file(uint16_pair *src, unsigned long process_len, int num_pro
             ;
         nvtxRangePush("Output Copy");
         src[process_len * numDMs].first = 1;
-        // for (int i = 0; i < numDMs; i++)
-        // {
-        //     outfile[i].write((char *)src + i * process_len * sizeof(uint16_pair), process_len * sizeof(uint16_pair));
-        // }
+        for (int i = 0; i < numDMs; i++)
+        {
+            outfile[i].write((char *)src + i * process_len * sizeof(uint16_pair), process_len * sizeof(uint16_pair));
+        }
         count++;
         osm->wait_for_cpu = false;
         nvtxRangePop();
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 {
     verbose = false;
     int numDMs = 1;
-    int count = 4;
+    int count = 1;
     float bw = 128e6;
     float dm = 615.566;
     float f0 = 1e9;
@@ -230,35 +230,35 @@ int main(int argc, char *argv[])
     }
     cudaMallocHost((void **)&output_check, numDMs * signal_size * sizeof(Complex));
 
-    Complex *output;
-    output = (Complex *)malloc((numDMs * process_len + 1) * sizeof(Complex));
-    if (output == NULL)
-    {
-        cout << "Memory Allocation Failed" << endl;
-        exit(1);
-    }
-    cudaError_t error;
-    error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(Complex), cudaHostRegisterDefault);
-    if (error != cudaSuccess)
-    {
-        cout << "Host Memory Registration Failed" << endl;
-        exit(1);
-    }
-
-    // uint16_pair *output;
-    // output = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(Complex));
+    // Complex *output;
+    // output = (Complex *)malloc((numDMs * process_len + 1) * sizeof(Complex));
     // if (output == NULL)
     // {
     //     cout << "Memory Allocation Failed" << endl;
     //     exit(1);
     // }
     // cudaError_t error;
-    // error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
+    // error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(Complex), cudaHostRegisterDefault);
     // if (error != cudaSuccess)
     // {
     //     cout << "Host Memory Registration Failed" << endl;
     //     exit(1);
     // }
+
+    uint16_pair *output;
+    output = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(uint16_pair));
+    if (output == NULL)
+    {
+        cout << "Memory Allocation Failed" << endl;
+        exit(1);
+    }
+    cudaError_t error;
+    error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
+    if (error != cudaSuccess)
+    {
+        cout << "Host Memory Registration Failed" << endl;
+        exit(1);
+    }
 
     uint16_pair *current_input;
 
@@ -266,8 +266,8 @@ int main(int argc, char *argv[])
 
     vector<thread> threads;
 
-    threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &osm);
-    // threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &osm);
+    // threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &osm);
+    threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &osm);
     sleep(1);
 
     cout << "Output Bytes: " << signal_size * sizeof(Complex) * numDMs << endl;
@@ -301,16 +301,16 @@ int main(int argc, char *argv[])
     // // // plot_abs_concurrent(output_check+49*block_size*numDMs, process_len, block_size, numDMs, 1);
     // show();
     
-    // For single DM test
-    float *data = new float[block_size];
-    for (int i = 0; i < block_size; i++)
-    {
-        data[i] = sqrt(pow(output_check[i].x, 2) + pow(output_check[i].y, 2));
-    }
+    // // For single DM test
+    // float *data = new float[block_size];
+    // for (int i = 0; i < block_size; i++)
+    // {
+    //     data[i] = sqrt(pow(output_check[i].x, 2) + pow(output_check[i].y, 2));
+    // }
 
-    ofstream outfile("data.bin", ios::binary | ios::out);
-    outfile.write((char *)data, block_size * sizeof(float));
-    outfile.close();
+    // ofstream outfile("data.bin", ios::binary | ios::out);
+    // outfile.write((char *)data, block_size * sizeof(float));
+    // outfile.close();
 
     return 0;
 }

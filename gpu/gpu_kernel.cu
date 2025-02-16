@@ -121,7 +121,7 @@ void ComplexMultiplyDelay_concurrent_batch(Complex *a, Complex *b, int N, Comple
     // 使用二维网格，x维度为numDMs，y维度为count
     dim3 grid_size(numDMs, count);
     // 块大小设为256，根据GPU架构调整
-    const int block_size = 256;
+    const int block_size = 1024;
     ComplexMultiplyDelay_concurrent_batch_kernel<<<grid_size, block_size, 0, stream>>>(a, b, block, delay, index, delay_block_size, N, count, numDMs);
 }
 

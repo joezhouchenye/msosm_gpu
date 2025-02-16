@@ -108,7 +108,7 @@ void MSOSM_GPU_DM_BATCH_stream::initialize_uint16(unsigned long fftpoint, int co
         CUDA_CHECK(cudaMalloc((void **)&(output_buffer_d[i]), (count * M_stream + 1) * sizeof(Complex)));
         cudaMemset(output_buffer_d[i] + count * M_stream, 0, sizeof(Complex));
 
-        CUDA_CHECK(cudaMalloc((void **)&(output_buffer_int16_d[i]), count * M_stream * sizeof(uint16_pair)));
+        CUDA_CHECK(cudaMalloc((void **)&(output_buffer_int16_d[i]), (count * M_stream + 1) * sizeof(uint16_pair)));
     }
     if (verbose)
         line();
@@ -165,6 +165,18 @@ void MSOSM_GPU_DM_BATCH_stream::get_output(Complex **output)
             ;
         wait_for_cpu[i] = true;
         CUDA_CHECK(cudaMemcpyAsync(output[i], output_buffer_d[i], (count * M_stream + 1) * sizeof(Complex), cudaMemcpyDeviceToHost, stream[i]));
+    }
+}
+
+void MSOSM_GPU_DM_BATCH_stream::get_output(uint16_pair **output)
+{
+    for (int i = 0; i < numStreams; i++)
+    {
+        complexToUint16((uint16_t *)output_buffer_int16_d[i], output_buffer_d[i], count * M_stream, stream[i]);
+        while (wait_for_cpu[i])
+            ;
+        wait_for_cpu[i] = true;
+        CUDA_CHECK(cudaMemcpyAsync(output[i], output_buffer_int16_d[i], (count * M_stream + 1) * sizeof(uint16_pair), cudaMemcpyDeviceToHost, stream[i]));
     }
 }
 
