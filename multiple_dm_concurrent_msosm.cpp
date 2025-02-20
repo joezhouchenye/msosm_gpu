@@ -113,6 +113,38 @@ void output_thread_file(uint16_pair *src, unsigned long process_len, int num_pro
     }
 }
 
+void output_thread_file_thread(uint16_pair *src, unsigned long process_len, int num_process, int numDMs, MSOSM_GPU_DM_concurrent *msosm, int thread_id)
+{
+    src[process_len * numDMs].first = 1;
+    // Get the current time
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // Convert to tm structure for local time
+    std::tm now_tm = *std::localtime(&now_time_t);
+
+    // Use a stringstream to format the date and time
+    std::ostringstream oss;
+    oss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
+
+    ofstream outfile;
+    // Open file in binary write mode
+    outfile.open(oss.str() + "_" + to_string(numDMs) + "_" + to_string(thread_id) + ".bin", ios::binary | ios::out);
+    int count = 0;
+    bool flag = false;
+    while (count < num_process)
+    {
+        while (src[process_len * numDMs].first == 1)
+            ;
+        nvtxRangePush("Output Copy");
+        src[process_len * numDMs].first = 1;
+        outfile.write((char *)src, numDMs * process_len * sizeof(uint16_pair));
+        count++;
+        msosm->wait_for_threads[thread_id] = false;
+        nvtxRangePop();
+    }
+}
+
 int main(int argc, char *argv[])
 {
     verbose = false;
@@ -166,7 +198,7 @@ int main(int argc, char *argv[])
     }
 
     // Pulsar signal parameters
-    const int inputSize = 16;
+    int inputSize = 16;
     unsigned long block_size = 8388608 * 2;
     float period = (float)block_size / bw;
     // Batch Size
@@ -175,7 +207,7 @@ int main(int argc, char *argv[])
 
     // Generate simulated complex signal
     SimulatedComplexSignal simulated_signal(bw, dm, f0, period, "uint16");
-    simulated_signal.generate_pulsar_signal(inputSize, false);
+    simulated_signal.generate_pulsar_signal(inputSize, false, 0, false);
     unsigned long signal_size = simulated_signal.signal_size;
 
     float *bw_i, *DM_i, *f0_i;
@@ -239,20 +271,42 @@ int main(int argc, char *argv[])
     //     exit(1);
     // }
 
-    uint16_pair *output;
-    output = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(uint16_pair));
-    if (output == NULL)
+    int thread_num = 1;
+    int thread_id = 0;
+    msosm.initialize_threads_flag(thread_num);
+
+    uint16_pair *output[thread_num];
+    for (int i = 0; i < thread_num; i++)
     {
-        cout << "Memory Allocation Failed" << endl;
-        exit(1);
+        output[i] = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(uint16_pair));
+        if (output[i] == NULL)
+        {
+            cout << "Memory Allocation Failed" << endl;
+            exit(1);
+        }
+        cudaError_t error;
+        error = cudaHostRegister(output[i], (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
+        if (error != cudaSuccess)
+        {
+            cout << "Host Memory Registration Failed" << endl;
+            exit(1);
+        }
     }
-    cudaError_t error;
-    error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
-    if (error != cudaSuccess)
-    {
-        cout << "Host Memory Registration Failed" << endl;
-        exit(1);
-    }
+
+    // uint16_pair *output;
+    // output = (uint16_pair *)malloc((numDMs * process_len + 1) * sizeof(uint16_pair));
+    // if (output == NULL)
+    // {
+    //     cout << "Memory Allocation Failed" << endl;
+    //     exit(1);
+    // }
+    // cudaError_t error;
+    // error = cudaHostRegister(output, (numDMs * process_len + 1) * sizeof(uint16_pair), cudaHostRegisterDefault);
+    // if (error != cudaSuccess)
+    // {
+    //     cout << "Host Memory Registration Failed" << endl;
+    //     exit(1);
+    // }
 
     uint16_pair *current_input;
 
@@ -261,7 +315,11 @@ int main(int argc, char *argv[])
     vector<thread> threads;
 
     // threads.emplace_back(output_thread, output_check, output, process_len, signal_size / process_len, numDMs, &msosm);
-    threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &msosm);
+    // threads.emplace_back(output_thread_file, output, process_len, signal_size / process_len, numDMs, &msosm);
+    for (int i = 0; i < thread_num; i++)
+    {
+        threads.emplace_back(output_thread_file_thread, output[i], process_len, signal_size / process_len / thread_num, numDMs, &msosm, i);
+    }
     sleep(1);
 
     cout << "Output Bytes: " << signal_size * sizeof(Complex) * numDMs << endl;
@@ -273,7 +331,9 @@ int main(int argc, char *argv[])
     {
         current_input = input + i * process_len;
         msosm.filter_block_uint16(current_input);
-        msosm.get_output(output);
+        // msosm.get_output(output);
+        thread_id = i % thread_num;
+        msosm.get_output_thread(output[thread_id], thread_id);
     }
 
     for (auto &t : threads)
@@ -294,7 +354,7 @@ int main(int argc, char *argv[])
     // plot_abs_concurrent_all(output_check, process_len, block_size, numDMs);
     // // // plot_abs_concurrent(output_check+49*block_size*numDMs, process_len, block_size, numDMs, 1);
     // show();
-    
+
     // // For single DM test
     // float *data = new float[block_size];
     // for (int i = 0; i < block_size; i++)

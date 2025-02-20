@@ -107,6 +107,15 @@ void MSOSM_GPU_DM_concurrent::initialize_uint16(unsigned long fftpoint, int coun
         line();
 }
 
+void MSOSM_GPU_DM_concurrent::initialize_threads_flag(int thread_num)
+{
+    wait_for_threads = new bool[thread_num];
+    for (int i = 0; i < thread_num; i++)
+    {
+        wait_for_threads[i] = false;
+    }
+}
+
 void MSOSM_GPU_DM_concurrent::filter_block_uint16(uint16_pair *input)
 {
     cudaStreamWaitEvent(fft_stream, dm_event, 0);
@@ -164,6 +173,21 @@ void MSOSM_GPU_DM_concurrent::get_output(uint16_pair *output)
         while (wait_for_cpu)
             ;
         wait_for_cpu = true;
+    }
+    cudaStreamWaitEvent(output_stream, ready_event, 0);
+    CUDA_CHECK(cudaMemcpyAsync(output, output_buffer_uint16_d, (count * M_common * numDMs + 1) * sizeof(uint16_pair), cudaMemcpyDeviceToHost, output_stream));
+    cudaEventRecord(output_event, output_stream);
+}
+
+void MSOSM_GPU_DM_concurrent::get_output_thread(uint16_pair *output, int thread_id)
+{
+    complexToUint16((uint16_t *)output_buffer_uint16_d, output_buffer_d, count * M_common * numDMs, dm_stream);
+    cudaEventRecord(ready_event, dm_stream);
+    if (!compute_only)
+    {
+        while (wait_for_threads[thread_id])
+            ;
+        wait_for_threads[thread_id] = true;
     }
     cudaStreamWaitEvent(output_stream, ready_event, 0);
     CUDA_CHECK(cudaMemcpyAsync(output, output_buffer_uint16_d, (count * M_common * numDMs + 1) * sizeof(uint16_pair), cudaMemcpyDeviceToHost, output_stream));

@@ -18,9 +18,11 @@ public:
     MSOSM_GPU_DM_concurrent(float *bw, float *dm, float *f0, int numDMs);
     void get_device_info();
     void initialize_uint16(unsigned long fftpoint, int count = 1, unsigned long input_size=0, bool compute_only=false);
+    void initialize_threads_flag(int thread_num);
     void filter_block_uint16(uint16_pair *input);
     void get_output(Complex *output);
     void get_output(uint16_pair *output);
+    void get_output_thread(uint16_pair *output, int thread_id);
     void synchronize();
     void reset_device();
     ~MSOSM_GPU_DM_concurrent();
@@ -35,6 +37,7 @@ private:
 public:
     int count;
     bool wait_for_cpu;
+    bool *wait_for_threads;
 
 private:
     Complex *output_buffer_d;
