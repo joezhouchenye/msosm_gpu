@@ -1,22 +1,24 @@
 # Multi-Segment Overlap-Save Method for Pulsar Coherent Dedispersion
 
-## Usage:
+My test code for MS-OSM using various GPU implementations. The best GPU implementation still needs to be further evaluated.
 
-```
-msosm CLI:
---verbose Verbose mode
---file    Input PSRDADA file
+## Code Structure
 
-If simulated data is used:
---bw      Signal bandwith in Hz (default: 16e6)
---dm      Dispersion measure in pc cm^-3 (default: 750)
---f0      Band start frequency in Hz (default: 1e9)
---period  Signal period in s (default: 0.024)
---snr     Add gaussian noise to achieve an SNR in dB
---show    Plot the results
-```
-
-## Custom Class Usage:
-
-- GPU version: class MSOSM_GPU in `msosm_gpu.h`
-- CPU version: class MSOSM_CPU in `msosm_cpu.h`
+- `build.sh`: Script to build the code
+- `CMakeLists.txt`: CMake file to build the code
+- `dedispersion`:
+  - `msosm_stream`: Simple MS-OSM for a single DM with a stream
+  - `msosm_dm_loop`: MS-OSM for multiple DM trials using a loop
+  - `msosm_dm_stream`: MS-OSM for multiple DM trials using streams
+  - `msosm_dm_concurrent`: Concurrent execution for multiple DM trials using MS-OSM
+  - `overlap_save`: Simple Overlap-Save for a single DM
+  - `overlap_save_dm_concurrent`: Concurrent execution for multiple DM trials using Overlap-Save
+- `folding`: Folding process on GPU
+- `gpu`: GPU kernel functions
+- `psrdada`: PSRDADA file I/O
+- `simulated_pulsar`: Code to generate a simulated pulsar in time-domain
+- `utils`: Utility functions
+- `msosm_psrdata`: Example code to process a psrdada file using MS-OSM
+- `multiple_dm_*.cpp`: Example code for multiple DM trials using different approaches
+- `multiple_*.cpp`: Example code for a single DM
+- `test_*.cpp`: Test code for performance evaluation
