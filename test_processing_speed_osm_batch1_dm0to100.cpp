@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
         {"stop", required_argument, nullptr, 'e'},
         {"bw", required_argument, nullptr, 'w'},
         {"dm", required_argument, nullptr, 'd'},
+        {"dmcount", required_argument, nullptr, 'u'},
         {"f0", required_argument, nullptr, 'f'},
         {"fftpoint", required_argument, nullptr, 'n'},
         {"compare", required_argument, nullptr, 'p'},
@@ -59,6 +60,9 @@ int main(int argc, char *argv[])
             continue;
         case 'd':
             dm = stof(optarg);
+            continue;
+        case 'u':
+            dmcount = stoi(optarg);
             continue;
         case 'f':
             f0 = stof(optarg);
