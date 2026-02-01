@@ -16,6 +16,12 @@ else()
     message(STATUS "g++-12 not found, not setting CMAKE_CUDA_HOST_COMPILER")
 endif()
 
+if(GPP_VERSION_CHECK_RESULT EQUAL 0)
+    set(CMAKE_CXX_COMPILER "/usr/bin/g++-12")
+else()
+    message(STATUS "g++-12 not found, not setting CMAKE_CXX_COMPILER")
+endif()
+
 # Specify the maximum number of concurrent processes for building
 set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 
@@ -80,6 +86,7 @@ set(EXECTABLES
   test_processing_speed_osm_dmtrial
   test_multiple_dm_msosm_fused
   test_multiple_dm_msosm_stream
+  check_msosm
   # Add more executables here
 )
 
@@ -111,7 +118,7 @@ foreach(EXE ${EXECTABLES})
   # FFTW
   target_link_libraries(${EXE} fftw3f)
 
-  #NVTX
+  #NVTXtest_processing_speed_msosm.cpp
   target_link_libraries(${EXE} CUDA::nvtx3)
 
 endforeach()

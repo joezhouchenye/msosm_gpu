@@ -40,6 +40,7 @@ void plot_abs(Complex *signal, unsigned long size)
 void show()
 {
     plt::show();
+    plt::detail::_interpreter::kill();
 }
 
 void plot_pol1(uint16_pair *signal, unsigned long size)
